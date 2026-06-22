@@ -5,7 +5,7 @@ const edcrInstance = axios.create({
     "Content-Type": "application/json"
   }
 })
-export const loginRequest = async (username = "user1", password = "pass@123",endpoint) => {
+export const loginRequest = async (username = "user1", password = "pass@123", endpoint) => {
   let apiError = "Currently we are facing some issues. Please try again after some time.";
   var params = new URLSearchParams();
   username && params.append("username", "user1");
@@ -67,7 +67,7 @@ export const edcrHttpRequest_ = async (action, res, endPoint, body = []) => {
     }
   }
   const loginInstance = await axios.create({
-    baseURL: "https://ppa-demo.ddns.net",
+    baseURL: "https://dev-test.chandigarhsmartcity.in",
     //baseURL: window.location.origin,
     headers: {
       // "Content-Type": "application/x-www-form-urlencoded",
@@ -139,27 +139,38 @@ export const edcrHttpRequest = async (
       headers
     });
 
-  endPoint = "edcr/rest/dcr/scrutinizeplan"//addQueryArg(endPoint, queryObject);
+  const isLayoutApproval = customRequestInfo.subtype === "Layout Approval";
+  if (isLayoutApproval) {
+    endPoint = "edcr/rest/dcr/layout/scrutinize?tenantId=state";
+  } else {
+    endPoint = "edcr/rest/dcr/scrutinizeplan";
+  }
   var response;
   try {
     const id = crypto.randomUUID();
     const transactionNumber = id;
-    let appliactionType = customRequestInfo.type || "PERMIT";
-    let applicationSubType = customRequestInfo.subtype;
-    let applicantName = customRequestInfo.name
+    let appliactionType = isLayoutApproval ? "LAYOUT_PERMIT" : (customRequestInfo.type || "PERMIT");
+    let applicationSubType = isLayoutApproval ? "NEW_CONSTRUCTION" : customRequestInfo.subtype;
+    let applicantName = customRequestInfo.name;
 
     edcrRequest = { ...edcrRequest, transactionNumber };
     edcrRequest = { ...edcrRequest, appliactionType };
     edcrRequest = { ...edcrRequest, applicationSubType };
     edcrRequest = { ...edcrRequest, applicantName };
+    if (isLayoutApproval) {
+      edcrRequest.architectInformation = "Sundar";
+    }
     var bodyFormData = new FormData();
     bodyFormData.append("edcrRequest", JSON.stringify(edcrRequest));
     bodyFormData.append("planFile", file);
-    let response = await axios({
+    response = await axios({
       method: "post",
       url: `https://dev-test.chandigarhsmartcity.in/${endPoint}`,
       data: bodyFormData,
-      headers: { "Content-Type": "multipart/form-data" }
+      headers: {
+        "Content-Type": "multipart/form-data",
+        ...(access_token ? { "Authorization": `Bearer ${access_token}` } : {})
+      }
     });
     if (response) {
       const responseStatus = parseInt(response.status, 10);
